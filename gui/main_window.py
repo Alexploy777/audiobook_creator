@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(655, 644)
+        MainWindow.resize(655, 659)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.gridLayout_3 = QtWidgets.QGridLayout(self.centralwidget)
@@ -98,6 +98,8 @@ class Ui_MainWindow(object):
         self.gridLayout = QtWidgets.QGridLayout()
         self.gridLayout.setObjectName("gridLayout")
         self.label_cover_of_book = QtWidgets.QLabel(self.FileSelectionPanel)
+        self.label_cover_of_book.setMinimumSize(QtCore.QSize(150, 150))
+        self.label_cover_of_book.setAlignment(QtCore.Qt.AlignCenter)
         self.label_cover_of_book.setObjectName("label_cover_of_book")
         self.gridLayout.addWidget(self.label_cover_of_book, 1, 0, 1, 1)
         self.pushButton_upload_cover = QtWidgets.QPushButton(self.FileSelectionPanel)
