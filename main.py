@@ -4,6 +4,8 @@ from PyQt5.QtGui import QPixmap
 # from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import *
 from PyQt5 import QtCore
+from mutagen.id3 import ID3, APIC
+import io
 
 from gui import Ui_MainWindow  # Импортируем Ui_MainWindow из пакета gui
 
@@ -36,6 +38,32 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
                     self.listWidget.addItem(path)
                 else:
                     QMessageBox.warning(self, "Предупреждение", f"Файл {path} уже добавлен.")
+
+        if file_paths:
+            self.extract_and_show_cover(file_paths[0])
+
+    def extract_and_show_cover(self, file_path):
+        try:
+            audio = ID3(file_path)
+            for tag in audio.values():
+                if isinstance(tag, APIC):
+                    image_data = tag.data
+                    image = QPixmap()
+                    image.loadFromData(image_data)
+                    if image.isNull():
+                        QMessageBox.warning(self, "Ошибка", "Не удалось загрузить изображение обложки.")
+                    else:
+                        self.label_cover_of_book.setPixmap(
+                            image.scaled(self.label_cover_of_book.size(), aspectRatioMode=QtCore.Qt.KeepAspectRatio))
+                    break
+            else:
+                # Нет обложки в метаданных
+                self.label_cover_of_book.clear()
+                QMessageBox.information(self, "Информация", "Обложка не найдена в выбранном файле.")
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
+
+
 
     def remove_selected_files(self):
         # Реализация удаления выбранных файлов из listWidget
