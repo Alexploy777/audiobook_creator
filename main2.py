@@ -2,9 +2,7 @@
 
 from PyQt5 import QtCore
 from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QFileDialog, QMessageBox
-)
+from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox)
 from mutagen.id3 import ID3, APIC
 
 from gui import Ui_MainWindow
@@ -16,6 +14,11 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.setWindowTitle('Audiobook Creator')
 
+        # self.file_manager = FileManager()
+        # self.metadata_manager = MetadataManager()
+        self.init_ui()
+
+    def init_ui(self):
         # Подключение сигналов к слотам
         self.pushButton.clicked.connect(self.add_files)
         self.pushButton_2.clicked.connect(self.remove_selected_files)
@@ -50,7 +53,6 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
             # Автоматически выделяем первый файл после загрузки
             if self.listWidget.count() > 0:
                 self.listWidget.setCurrentRow(0)
-
 
     def remove_selected_files(self):
         selected_items = self.listWidget.selectedItems()
