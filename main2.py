@@ -47,8 +47,10 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
                 else:
                     QMessageBox.warning(self, "Предупреждение", f"Файл {path} уже добавлен.")
 
-        if file_paths:
-            self.display_metadata()
+            # Автоматически выделяем первый файл после загрузки
+            if self.listWidget.count() > 0:
+                self.listWidget.setCurrentRow(0)
+
 
     def remove_selected_files(self):
         selected_items = self.listWidget.selectedItems()
