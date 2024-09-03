@@ -14,6 +14,7 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(AudiobookCreator, self).__init__()
         self.setupUi(self)
+        self.setWindowTitle('Audiobook Creator')
 
         # Подключение сигналов к слотам
         self.pushButton.clicked.connect(self.add_files)

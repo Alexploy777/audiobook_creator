@@ -1,11 +1,12 @@
 import sys
 
+from PyQt5 import QtCore
 from PyQt5.QtGui import QPixmap
 # from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import *
-from PyQt5 import QtCore
 from mutagen.id3 import ID3, APIC
-import io
+from mutagen.easyid3 import EasyID3
+from mutagen.mp3 import MP3
 
 from gui import Ui_MainWindow  # Импортируем Ui_MainWindow из пакета gui
 
@@ -13,7 +14,7 @@ from gui import Ui_MainWindow  # Импортируем Ui_MainWindow из па�
 class AudiobookCreator(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(AudiobookCreator, self).__init__()
-        self.ui = Ui_MainWindow()
+        # self.ui = Ui_MainWindow()
         self.setupUi(self)
         self.setWindowTitle('Audiobook Creator')
 
@@ -41,6 +42,8 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
 
         if file_paths:
             self.extract_and_show_cover(file_paths[0])
+            self.extract_metadata(file_paths[0])
+
 
     def extract_and_show_cover(self, file_path):
         try:
@@ -63,6 +66,20 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         except Exception as e:
             QMessageBox.critical(self, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
 
+    def extract_metadata(self, file_path):
+        audio = MP3(file_path, ID3=EasyID3)
+
+        # Извлечение метаданных
+        book_title = audio.get('title', [''])[0]
+        author_name = audio.get('artist', [''])[0]
+        album_name = audio.get('album', [''])[0]
+        genre = audio.get('genre', [''])[0]
+
+        # Установка значений в поля интерфейса
+        self.book_name.setText(book_title)
+        self.autor_name.setText(author_name)
+        self.album_name.setText(album_name)
+        self.genre_name.setText(genre)
 
 
     def remove_selected_files(self):
