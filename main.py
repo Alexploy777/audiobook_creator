@@ -1,5 +1,9 @@
+from PyQt5.QtWidgets import QMainWindow
+
 from core.metadata import MetadataManager
 from data.file_manager import FileManager
+from gui import Ui_MainWindow
+
 
 class AudiobookCreator(QMainWindow, Ui_MainWindow):
     def __init__(self):
