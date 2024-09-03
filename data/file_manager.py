@@ -1,3 +1,5 @@
+from PyQt5 import QtCore
+from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 class FileManager:
@@ -32,3 +34,20 @@ class FileManager:
         if not self.file_paths:
             return True
         return False
+
+    def upload_cover(self, label_cover_of_book):
+        options = QFileDialog.Options()
+        cover_image_path, _ = QFileDialog.getOpenFileName(None, "Выберите изображение обложки", "",
+                                                          "Images (*.png *.jpg *.bmp);;All Files (*)", options=options)
+
+        if cover_image_path:
+            # Показать изображение
+            self.cover_image_path = cover_image_path
+            pixmap = QPixmap(cover_image_path)
+            if pixmap.isNull():
+                QMessageBox.warning(None, "Ошибка", "Не удалось загрузить изображение.")
+            else:
+                label_cover_of_book.setPixmap(
+                    pixmap.scaled(label_cover_of_book.size(), aspectRatioMode=QtCore.Qt.KeepAspectRatio))
+        else:
+            QMessageBox.warning(None, "Предупреждение", "Изображение не выбрано.")

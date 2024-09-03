@@ -1,4 +1,6 @@
-from PyQt5.QtWidgets import QMainWindow
+import sys
+
+from PyQt5.QtWidgets import QMainWindow, QApplication
 
 from core.metadata import MetadataManager
 from data.file_manager import FileManager
@@ -61,3 +63,21 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         self.lineEdit_genre.setText(metadata["genre"])
 
         self.metadata_manager.extract_and_show_cover(audio, self.label_cover_of_book)
+
+    def convert_files(self):
+        pass
+
+
+    def stop_and_clean(self):
+        pass
+
+
+    def upload_cover(self):
+        self.file_manager.upload_cover(self.label_cover_of_book)
+
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    w = AudiobookCreator()
+    w.show()
+    sys.exit(app.exec_())
