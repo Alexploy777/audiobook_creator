@@ -1,13 +1,13 @@
 # main.py
 
-from PyQt5.QtWidgets import (
-    QApplication, QMainWindow, QFileDialog, QMessageBox, QLabel
-)
-from PyQt5.QtGui import QPixmap
 from PyQt5 import QtCore
-from mutagen.id3 import ID3, APIC, TIT2, TPE1, TALB, TDRC, TCON
+from PyQt5.QtGui import QPixmap
+from PyQt5.QtWidgets import (
+    QApplication, QMainWindow, QFileDialog, QMessageBox
+)
+from mutagen.id3 import ID3, APIC
+
 from gui import Ui_MainWindow
-import io
 
 
 class AudiobookCreator(QMainWindow, Ui_MainWindow):
@@ -45,6 +45,9 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
                     self.listWidget.addItem(path)
                 else:
                     QMessageBox.warning(self, "Предупреждение", f"Файл {path} уже добавлен.")
+
+        # if file_paths:
+        #     self.display_metadata()
 
     def remove_selected_files(self):
         selected_items = self.listWidget.selectedItems()
@@ -152,7 +155,7 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         # Извлечение и отображение обложки
         self.extract_and_show_cover(audio, file_path)
 
-    def extract_and_show_cover(self, audio, file_path):
+    def extract_and_show_cover(self, file_path, audio):
         if audio is None:
             self.label_cover_of_book.clear()
             return
