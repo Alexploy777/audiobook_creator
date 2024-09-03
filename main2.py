@@ -1,11 +1,13 @@
 # main.py
-
 from PyQt5 import QtCore
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QFileDialog, QMessageBox)
 from mutagen.id3 import ID3, APIC
 
 from gui import Ui_MainWindow
+from PyQt5.QtWidgets import QApplication, QMainWindow
+from data.file_manager import FileManager
+# from core.metadata import MetadataManager
 
 
 class AudiobookCreator(QMainWindow, Ui_MainWindow):
@@ -14,61 +16,67 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         self.setupUi(self)
         self.setWindowTitle('Audiobook Creator')
 
-        # self.file_manager = FileManager()
+        self.file_manager = FileManager()
         # self.metadata_manager = MetadataManager()
         self.init_ui()
 
     def init_ui(self):
         # Подключение сигналов к слотам
         self.pushButton.clicked.connect(self.add_files)
-        self.pushButton_2.clicked.connect(self.remove_selected_files)
+        # self.pushButton_2.clicked.connect(self.remove_selected_files)
         self.pushButton_upload_cover.clicked.connect(self.upload_cover)
         self.pushButton_convert.clicked.connect(self.convert_files)
         self.pushButton_stop_and_clean.clicked.connect(self.stop_and_clean)
 
-        self.file_paths = []  # Список для хранения путей к файлам
+        # self.file_paths = []  # Список для хранения путей к файлам
         self.cover_image_path = None  # Путь к изображению обложки
 
-        # Подключение сигнала выбора элемента списка к слоту
+        # выделение элемента в listWidget запускает display_metadata
         self.listWidget.itemSelectionChanged.connect(self.display_metadata)
 
+    # def add_files(self):
+    #     options = QFileDialog.Options()
+    #     file_paths, _ = QFileDialog.getOpenFileNames(
+    #         self,
+    #         "Выберите MP3 файлы",
+    #         "",
+    #         "MP3 Files (*.mp3);;All Files (*)",
+    #         options=options
+    #     )
+    #
+    #     if file_paths:
+    #         for path in file_paths:
+    #             if path not in self.file_paths:
+    #                 self.file_paths.append(path)
+    #                 self.listWidget.addItem(path)
+    #             else:
+    #                 QMessageBox.warning(self, "Предупреждение", f"Файл {path} уже добавлен.")
+    #
+    #         # Автоматически выделяем первый файл после загрузки
+    #         if self.listWidget.count() > 0:
+    #             self.listWidget.setCurrentRow(0)
+
     def add_files(self):
-        options = QFileDialog.Options()
-        file_paths, _ = QFileDialog.getOpenFileNames(
-            self,
-            "Выберите MP3 файлы",
-            "",
-            "MP3 Files (*.mp3);;All Files (*)",
-            options=options
-        )
+        self.file_manager.add_files(self.listWidget)
+        self.file_paths = self.file_manager.file_paths[:]
+        print(self.file_paths) # Вывод списка файлов - потом убрать!
 
-        if file_paths:
-            for path in file_paths:
-                if path not in self.file_paths:
-                    self.file_paths.append(path)
-                    self.listWidget.addItem(path)
-                else:
-                    QMessageBox.warning(self, "Предупреждение", f"Файл {path} уже добавлен.")
 
-            # Автоматически выделяем первый файл после загрузки
-            if self.listWidget.count() > 0:
-                self.listWidget.setCurrentRow(0)
-
-    def remove_selected_files(self):
-        selected_items = self.listWidget.selectedItems()
-        if not selected_items:
-            QMessageBox.warning(self, "Предупреждение", "Нет выбранных файлов для удаления.")
-            return
-
-        for item in selected_items:
-            file_path = item.text()
-            if file_path in self.file_paths:
-                self.file_paths.remove(file_path)
-            self.listWidget.takeItem(self.listWidget.row(item))
-
-        # Очистить метаданные и обложку, если удален последний файл
-        if not self.file_paths:
-            self.clear_metadata()
+    # def remove_selected_files(self):
+    #     selected_items = self.listWidget.selectedItems()
+    #     if not selected_items:
+    #         QMessageBox.warning(self, "Предупреждение", "Нет выбранных файлов для удаления.")
+    #         return
+    #
+    #     for item in selected_items:
+    #         file_path = item.text()
+    #         if file_path in self.file_paths:
+    #             self.file_paths.remove(file_path)
+    #         self.listWidget.takeItem(self.listWidget.row(item))
+    #
+    #     # Очистить метаданные и обложку, если удален последний файл
+    #     if not self.file_paths:
+    #         self.clear_metadata()
 
     def upload_cover(self):
         options = QFileDialog.Options()
