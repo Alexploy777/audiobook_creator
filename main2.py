@@ -46,8 +46,8 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
                 else:
                     QMessageBox.warning(self, "Предупреждение", f"Файл {path} уже добавлен.")
 
-        # if file_paths:
-        #     self.display_metadata()
+        if file_paths:
+            self.display_metadata()
 
     def remove_selected_files(self):
         selected_items = self.listWidget.selectedItems()
@@ -155,7 +155,7 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         # Извлечение и отображение обложки
         self.extract_and_show_cover(audio, file_path)
 
-    def extract_and_show_cover(self, file_path, audio):
+    def extract_and_show_cover(self, audio, file_path):
         if audio is None:
             self.label_cover_of_book.clear()
             return
