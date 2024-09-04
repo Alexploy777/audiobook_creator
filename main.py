@@ -1,7 +1,5 @@
 import sys
-
 from PyQt5.QtWidgets import QMainWindow, QApplication
-
 from core.metadata import MetadataManager
 from data.file_manager import FileManager
 from gui import Ui_MainWindow
@@ -24,7 +22,6 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         self.pushButton_convert.clicked.connect(self.convert_files)
         self.pushButton_stop_and_clean.clicked.connect(self.stop_and_clean)
 
-        self.cover_image_path = None
         self.listWidget.itemSelectionChanged.connect(self.display_metadata)
 
     def add_files(self):

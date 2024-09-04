@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import QFileDialog, QMessageBox
 class FileManager:
     def __init__(self):
         self.file_paths = []
+        self.cover_image_path = None
 
     def add_files(self, listWidget):
         options = QFileDialog.Options()
@@ -37,8 +38,7 @@ class FileManager:
 
     def upload_cover(self, label_cover_of_book):
         options = QFileDialog.Options()
-        cover_image_path, _ = QFileDialog.getOpenFileName(None, "Выберите изображение обложки", "",
-                                                          "Images (*.png *.jpg *.bmp);;All Files (*)", options=options)
+        cover_image_path, _ = QFileDialog.getOpenFileName(None, "Выберите изображение обложки", "", "Images (*.png *.jpg *.bmp);;All Files (*)", options=options)
 
         if cover_image_path:
             # Показать изображение
