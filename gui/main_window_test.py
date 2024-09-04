@@ -108,7 +108,7 @@ class Ui_MainWindow(object):
         self.label_output_file.setObjectName("label_output_file")
         self.verticalLayout_9.addWidget(self.label_output_file)
         self.progressBar = QtWidgets.QProgressBar(self.ControlPanel)
-        self.progressBar.setProperty("value", 10)
+        self.progressBar.setProperty("value", 0)
         self.progressBar.setTextVisible(False)
         self.progressBar.setObjectName("progressBar")
         self.verticalLayout_9.addWidget(self.progressBar)
