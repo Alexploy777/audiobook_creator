@@ -1,10 +1,34 @@
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog  # Импортируем класс QMainWindow и QApplication
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox  # Импортируем класс QMainWindow и QApplication
+from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QThread, pyqtSignal
+from core.audio_processing import AudioProcessor # Подключаем AudioProcessor из core/audio_processing.py
+
+
 from core.metadata import MetadataManager # Подключаем MetadataManager из core/metadata.py
 from data.file_manager import FileManager # Подключаем FileManager из data/file_manager
 from data.config import Config # Подключаем Config из data/config
 from gui import Ui_MainWindow # Подключаем класс MainWindow из gui.py
 from core.audio_processing import convert_files
+from core.audio_processing import AudioProcessor # Подключаем AudioProcessor из core/audio_processing.py
+
+class ConvertThread(QThread):
+    progress_updated = pyqtSignal(int)
+    conversion_finished = pyqtSignal()
+
+    def __init__(self, audio_processor, file_paths, output_path, bitrate):
+        super().__init__()
+        self.audio_processor = audio_processor
+        self.file_paths = file_paths
+        self.output_path = output_path
+        self.bitrate = bitrate
+
+    def run(self):
+        self.audio_processor.combine_and_convert_to_m4b(self.file_paths, self.output_path, self.bitrate, self.update_progress)
+        self.conversion_finished.emit()
+
+    def update_progress(self, progress):
+        self.progress_updated.emit(progress)
 
 
 class AudiobookCreator(QMainWindow, Ui_MainWindow):
@@ -17,6 +41,8 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
 
         self.file_manager = FileManager()
         self.metadata_manager = MetadataManager()
+        self.audio_processor = AudioProcessor(ffmpeg_path="external/ffmpeg.exe")  # Укажите путь к ffmpeg
+
         self.init_ui()
 
     def init_ui(self):
@@ -28,7 +54,7 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         self.pushButton.clicked.connect(self.add_files)
         self.pushButton_2.clicked.connect(self.remove_selected_files)
         self.pushButton_upload_cover.clicked.connect(self.upload_cover)
-        self.pushButton_convert.clicked.connect(self.convert_files_action) #
+        self.pushButton_convert.clicked.connect(self.start_conversion) #
         self.pushButton_stop_and_clean.clicked.connect(self.stop_and_clean)
 
         self.listWidget.itemSelectionChanged.connect(self.display_metadata)
@@ -76,6 +102,21 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
     def convert_files(self):
         pass
 
+    def start_conversion(self):
+        output_path, _ = QFileDialog.getSaveFileName(self, "Сохранить аудиокнигу", "", "M4B Files (*.m4b)")
+        if not output_path:
+            return
+
+        bitrate = self.comboBox_audio_quality.currentText()
+        file_paths = self.file_manager.file_paths
+
+        self.thread = ConvertThread(self.audio_processor, file_paths, output_path, bitrate)
+        self.thread.progress_updated.connect(self.update_progress)
+        self.thread.conversion_finished.connect(self.conversion_finished)
+
+        self.thread.start()
+
+
     def convert_files_action(self):
         output_dir = QFileDialog.getExistingDirectory(self, "Выберите папку для сохранения")
         if output_dir:
@@ -97,7 +138,9 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
     def update_progress(self, value):
         self.progressBar.setValue(value)
 
-
+    def conversion_finished(self):
+        QMessageBox.information(self, "Готово", "Конвертация завершена!")
+        self.progressBar.setValue(0)
 
     def stop_and_clean(self):
         pass
