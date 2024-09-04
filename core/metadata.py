@@ -72,3 +72,7 @@ class MetadataManager:
         lineEdit_year.clear()
         lineEdit_genre.clear()
         label_cover_of_book.clear()
+
+
+if __name__ == '__main__':
+    pass

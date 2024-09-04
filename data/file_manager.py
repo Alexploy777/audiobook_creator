@@ -51,3 +51,7 @@ class FileManager:
                     pixmap.scaled(label_cover_of_book.size(), aspectRatioMode=QtCore.Qt.KeepAspectRatio))
         else:
             QMessageBox.warning(None, "Предупреждение", "Изображение не выбрано.")
+
+
+if __name__ == '__main__':
+    pass
