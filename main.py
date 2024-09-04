@@ -1,16 +1,16 @@
 import sys
-from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox  # Импортируем класс QMainWindow и QApplication
-from PyQt5.QtCore import Qt
+
 from PyQt5.QtCore import QThread, pyqtSignal
-from core.audio_processing import AudioProcessor # Подключаем AudioProcessor из core/audio_processing.py
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, \
+    QMessageBox  # Импортируем класс QMainWindow и QApplication
 
-
-from core.metadata import MetadataManager # Подключаем MetadataManager из core/metadata.py
-from data.file_manager import FileManager # Подключаем FileManager из data/file_manager
-from data.config import Config # Подключаем Config из data/config
-from gui import Ui_MainWindow # Подключаем класс MainWindow из gui.py
+from core.audio_processing import AudioProcessor  # Подключаем AudioProcessor из core/audio_processing.py
 from core.audio_processing import convert_files
-from core.audio_processing import AudioProcessor # Подключаем AudioProcessor из core/audio_processing.py
+from core.metadata import MetadataManager  # Подключаем MetadataManager из core/metadata.py
+from data.config import Config  # Подключаем Config из data/config
+from data.file_manager import FileManager  # Подключаем FileManager из data/file_manager
+from gui import Ui_MainWindow  # Подключаем класс MainWindow из gui.py
+
 
 class ConvertThread(QThread):
     progress_updated = pyqtSignal(int)
@@ -117,23 +117,23 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         self.thread.start()
 
 
-    def convert_files_action(self):
-        output_dir = QFileDialog.getExistingDirectory(self, "Выберите папку для сохранения")
-        if output_dir:
-            metadata_list = []
-            for i in range(self.listWidget.count()):
-                item = self.listWidget.item(i)
-                file_path = item.text()
-                metadata, _ = self.metadata_manager.extract_metadata(file_path)
-                metadata_list.append(metadata)
-
-            convert_files(
-                file_paths=self.file_manager.file_paths,
-                output_dir=output_dir,
-                cover_image_path=self.file_manager.cover_image_path,
-                metadata_list=metadata_list,
-                progress_callback=self.update_progress
-            )
+    # def convert_files_action(self):
+    #     output_dir = QFileDialog.getExistingDirectory(self, "Выберите папку для сохранения")
+    #     if output_dir:
+    #         metadata_list = []
+    #         for i in range(self.listWidget.count()):
+    #             item = self.listWidget.item(i)
+    #             file_path = item.text()
+    #             metadata, _ = self.metadata_manager.extract_metadata(file_path)
+    #             metadata_list.append(metadata)
+    #
+    #         convert_files(
+    #             file_paths=self.file_manager.file_paths,
+    #             output_dir=output_dir,
+    #             cover_image_path=self.file_manager.cover_image_path,
+    #             metadata_list=metadata_list,
+    #             progress_callback=self.update_progress
+    #         )
 
     def update_progress(self, value):
         self.progressBar.setValue(value)
