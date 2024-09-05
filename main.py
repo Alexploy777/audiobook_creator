@@ -5,26 +5,30 @@ from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, \
     QMessageBox  # Импортируем класс QMainWindow и QApplication
 
 from core.audio_processing import AudioProcessor  # Подключаем AudioProcessor из core/audio_processing.py
-from core.audio_processing import convert_files
+# from core.audio_processing import convert_files
 from core.metadata import MetadataManager  # Подключаем MetadataManager из core/metadata.py
 from data.config import Config  # Подключаем Config из data/config
 from data.file_manager import FileManager  # Подключаем FileManager из data/file_manager
 from gui import Ui_MainWindow  # Подключаем класс MainWindow из gui.py
-
+from mutagen.id3 import ID3, APIC
 
 class ConvertThread(QThread):
     progress_updated = pyqtSignal(int)
     conversion_finished = pyqtSignal()
 
-    def __init__(self, audio_processor, file_paths, output_path, bitrate):
+    def __init__(self, audio_processor, file_paths, output_path, bitrate, metadata, cover_image_path):
         super().__init__()
         self.audio_processor = audio_processor
         self.file_paths = file_paths
         self.output_path = output_path
         self.bitrate = bitrate
+        self.metadata = metadata
+        self.cover_image_path = cover_image_path
 
     def run(self):
-        self.audio_processor.combine_and_convert_to_m4b(self.file_paths, self.output_path, self.bitrate, self.update_progress)
+        self.audio_processor.convert_and_combine(self.file_paths, self.output_path, self.bitrate,
+                                                 self.metadata, self.cover_image_path,
+                                                 self.update_progress)
         self.conversion_finished.emit()
 
     def update_progress(self, progress):
@@ -110,37 +114,46 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         bitrate = self.comboBox_audio_quality.currentText()
         file_paths = self.file_manager.file_paths
 
-        self.thread = ConvertThread(self.audio_processor, file_paths, output_path, bitrate)
+        # Собираем метаданные из интерфейса
+        metadata = {
+            "title": self.lineEdit_title.text(),
+            "artist": self.lineEdit_artist.text(),
+            "album": self.lineEdit_album.text(),
+            "year": self.lineEdit_year.text(),
+            "genre": self.lineEdit_genre.text()
+        }
+
+        # Получаем путь к обложке (если оно загружено из файла или извлечено из mp3)
+        cover_image = self.metadata_manager.extract_cover_image(self.label_cover_of_book)
+
+        self.thread = ConvertThread(self.audio_processor, file_paths, output_path, bitrate, metadata, cover_image)
         self.thread.progress_updated.connect(self.update_progress)
         self.thread.conversion_finished.connect(self.conversion_finished)
 
         self.thread.start()
 
 
-    # def convert_files_action(self):
-    #     output_dir = QFileDialog.getExistingDirectory(self, "Выберите папку для сохранения")
-    #     if output_dir:
-    #         metadata_list = []
-    #         for i in range(self.listWidget.count()):
-    #             item = self.listWidget.item(i)
-    #             file_path = item.text()
-    #             metadata, _ = self.metadata_manager.extract_metadata(file_path)
-    #             metadata_list.append(metadata)
-    #
-    #         convert_files(
-    #             file_paths=self.file_manager.file_paths,
-    #             output_dir=output_dir,
-    #             cover_image_path=self.file_manager.cover_image_path,
-    #             metadata_list=metadata_list,
-    #             progress_callback=self.update_progress
-    #         )
+    def extract_cover_image(self, audio):
+        if audio is None:
+            return None
+        try:
+            for tag in audio.values():
+                if isinstance(tag, APIC):
+                    image_data = tag.data
+                    return image_data  # Возвращаем байтовые данные изображения
+            return None
+        except Exception as e:
+            QMessageBox.critical(self, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
+            return None
 
-    def update_progress(self, value):
-        self.progressBar.setValue(value)
+
+    def update_progress(self, progress):
+        self.progressBar.setValue(progress)
 
     def conversion_finished(self):
         QMessageBox.information(self, "Готово", "Конвертация завершена!")
         self.progressBar.setValue(0)
+
 
     def stop_and_clean(self):
         pass

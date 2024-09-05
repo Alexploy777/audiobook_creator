@@ -1,67 +1,76 @@
 import os
+from concurrent.futures import ThreadPoolExecutor
 from pydub import AudioSegment
 from mutagen.mp4 import MP4, MP4Cover
-from PyQt5.QtCore import Qt
-from data.config import Config # Подключаем Config из data/config
-
 
 class AudioProcessor:
     def __init__(self, ffmpeg_path):
         self.ffmpeg_path = ffmpeg_path
         AudioSegment.converter = ffmpeg_path
 
-    def combine_and_convert_to_m4b(self, file_paths, output_path, bitrate, progress_callback=None):
+    def convert_file_to_m4b(self, file_path, output_path, bitrate):
+        audio = AudioSegment.from_mp3(file_path)
+        audio.export(output_path, format="mp4", bitrate=bitrate, codec="aac")
+
+    def combine_files(self, file_paths, output_path, progress_callback=None):
         combined = AudioSegment.empty()
         total_files = len(file_paths)
 
         for index, file_path in enumerate(file_paths):
-            audio = AudioSegment.from_mp3(file_path)
+            audio = AudioSegment.from_file(file_path, format="mp4")
             combined += audio
 
+            # Обновляем прогресс на этапе объединения
             if progress_callback:
                 progress = int((index + 1) / total_files * 100)
                 progress_callback(progress)
 
-        # Экспортируем комбинированный файл как m4b
-        combined.export(output_path, format="mp4", bitrate=bitrate, codec="aac")
+        combined.export(output_path, format="mp4", codec="aac")
 
+    def add_cover_and_metadata(self, output_path, metadata, cover_image_bytes=None):
+        audio = MP4(output_path)
 
-def convert_files(file_paths, output_dir, cover_image_path, metadata_list, progress_callback):
-    try:
-        # Настройки конвертации
-        bit_rate = Config.AUDIO_BITRATE
+        # Добавление метаданных
+        audio['\xa9nam'] = metadata.get("title")
+        audio['\xa9ART'] = metadata.get("artist")
+        audio['\xa9alb'] = metadata.get("album")
+        audio['\xa9day'] = metadata.get("year")
+        audio['\xa9gen'] = metadata.get("genre")
 
-        for index, file_path in enumerate(file_paths):
-            # Чтение MP3 файла
-            audio = AudioSegment.from_mp3(file_path)
+        # Добавление обложки
+        # Добавление обложки из байтов
+        if cover_image_bytes:
+            cover = MP4Cover(cover_image_bytes, imageformat=MP4Cover.FORMAT_JPEG)
+            audio['covr'] = [cover]
 
-            # Применение метаданных
-            if metadata_list[index]:
-                audio.export(
-                    os.path.join(output_dir, f'{metadata_list[index]["title"]}.m4b'),
-                    format='mp4',
-                    bitrate=bit_rate,
-                    tags={
-                        'title': metadata_list[index]["title"],
-                        'artist': metadata_list[index]["artist"],
-                        'album': metadata_list[index]["album"],
-                        'year': metadata_list[index]["year"],
-                        'genre': metadata_list[index]["genre"]
-                    }
-                )
+        audio.save()
 
-                # Добавление обложки
-                if cover_image_path:
-                    mp4_file = MP4(os.path.join(output_dir, f'{metadata_list[index]["title"]}.m4b'))
-                    with open(cover_image_path, 'rb') as img_file:
-                        cover_data = img_file.read()
-                        mp4_file['covr'] = [MP4Cover(cover_data, imageformat=MP4Cover.FORMAT_JPEG)]
-                    mp4_file.save()
+    def convert_and_combine(self, mp3_files, output_path, bitrate, metadata, cover_image_path=None, progress_callback=None):
+        total_steps = len(mp3_files) + 1  # +1 for combining step
+        step_progress = 100 // total_steps
 
-            # Обновление прогресс-бара
-            progress = int((index + 1) / len(file_paths) * 100)
-            progress_callback(progress)
+        converted_files = []
+        for index, mp3_file in enumerate(mp3_files):
+            temp_output = os.path.splitext(mp3_file)[0] + "_temp.m4b"
+            self.convert_file_to_m4b(mp3_file, temp_output, bitrate)
+            converted_files.append(temp_output)
 
-        progress_callback(100)  # Установка прогресса на 100% по завершению
-    except Exception as e:
-        raise RuntimeError(f"Ошибка при конвертации файлов: {str(e)}")
+            # Обновляем прогресс после каждого конвертированного файла
+            if progress_callback:
+                progress = (index + 1) * step_progress
+                progress_callback(progress)
+
+        # Объединение всех временных m4b файлов
+        self.combine_files(converted_files, output_path, progress_callback)
+
+        # Добавление метаданных и обложки
+        self.add_cover_and_metadata(output_path, metadata, cover_image_path)
+
+        # Удаление временных файлов
+        for temp_file in converted_files:
+            os.remove(temp_file)
+
+        # Устанавливаем прогресс на 100% по завершении
+        if progress_callback:
+            progress_callback(100)
+

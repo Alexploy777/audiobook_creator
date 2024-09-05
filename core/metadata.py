@@ -65,6 +65,19 @@ class MetadataManager:
             QMessageBox.critical(None, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
 
     @staticmethod
+    def extract_cover_image(label_cover_of_book):
+        pixmap = label_cover_of_book.pixmap()
+        if pixmap is not None:
+            # Преобразование pixmap в байты
+            buffer = QtCore.QByteArray()
+            buffer_stream = QtCore.QBuffer(buffer)
+            buffer_stream.open(QtCore.QIODevice.WriteOnly)
+            pixmap.save(buffer_stream, "JPEG")
+            return buffer.data()
+        return None
+
+
+    @staticmethod
     def clear_metadata(lineEdit_title, lineEdit_artist, lineEdit_album, lineEdit_year, lineEdit_genre, label_cover_of_book):
         lineEdit_title.clear()
         lineEdit_artist.clear()
