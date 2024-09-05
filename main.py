@@ -76,10 +76,10 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         genre = audio.get('genre', [''])[0]
 
         # Установка значений в поля интерфейса
-        self.book_name.setText(book_title)
-        self.autor_name.setText(author_name)
-        self.album_name.setText(album_name)
-        self.genre_name.setText(genre)
+        self.lineEdit_title.setText(book_title)
+        self.lineEdit_artist.setText(author_name)
+        self.lineEdit_album.setText(album_name)
+        self.lineEdit_genre.setText(genre)
 
 
     def remove_selected_files(self):
