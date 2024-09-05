@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>655</width>
+    <width>563</width>
     <height>665</height>
    </rect>
   </property>
@@ -81,7 +81,7 @@
        </widget>
       </item>
       <item row="0" column="1">
-       <widget class="QGroupBox" name="FileSelectionPanel">
+       <widget class="QGroupBox" name="MetadataPanel">
         <property name="title">
          <string>Панель  метаданных</string>
         </property>
@@ -96,7 +96,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="book_name"/>
+            <widget class="QLineEdit" name="lineEdit_title"/>
            </item>
           </layout>
          </item>
@@ -110,7 +110,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="autor_name"/>
+            <widget class="QLineEdit" name="lineEdit_artist"/>
            </item>
           </layout>
          </item>
@@ -124,7 +124,21 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="album_name"/>
+            <widget class="QLineEdit" name="lineEdit_album"/>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_10">
+           <item>
+            <widget class="QLabel" name="label_album_name_3">
+             <property name="text">
+              <string>Год</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit_year"/>
            </item>
           </layout>
          </item>
@@ -138,7 +152,7 @@
             </widget>
            </item>
            <item>
-            <widget class="QLineEdit" name="genre_name"/>
+            <widget class="QLineEdit" name="lineEdit_genre"/>
            </item>
           </layout>
          </item>
@@ -230,7 +244,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>655</width>
+     <width>563</width>
      <height>21</height>
     </rect>
    </property>

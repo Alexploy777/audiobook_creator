@@ -1,109 +1,153 @@
 import sys
 
-from PyQt5.QtGui import QPixmap
-# from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import *
-from PyQt5 import QtCore
-from mutagen.id3 import ID3, APIC
-import io
+from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtWidgets import QMainWindow, QApplication, QFileDialog, \
+    QMessageBox  # Импортируем класс QMainWindow и QApplication
 
-from gui import Ui_MainWindow  # Импортируем Ui_MainWindow из пакета gui
+from core.audio_processing import AudioProcessor  # Подключаем AudioProcessor из core/audio_processing.py
+from core.audio_processing import convert_files
+from core.metadata import MetadataManager  # Подключаем MetadataManager из core/metadata.py
+from data.config import Config  # Подключаем Config из data/config
+from data.file_manager import FileManager  # Подключаем FileManager из data/file_manager
+from gui import Ui_MainWindow  # Подключаем класс MainWindow из gui.py
+
+
+class ConvertThread(QThread):
+    progress_updated = pyqtSignal(int)
+    conversion_finished = pyqtSignal()
+
+    def __init__(self, audio_processor, file_paths, output_path, bitrate):
+        super().__init__()
+        self.audio_processor = audio_processor
+        self.file_paths = file_paths
+        self.output_path = output_path
+        self.bitrate = bitrate
+
+    def run(self):
+        self.audio_processor.combine_and_convert_to_m4b(self.file_paths, self.output_path, self.bitrate, self.update_progress)
+        self.conversion_finished.emit()
+
+    def update_progress(self, progress):
+        self.progress_updated.emit(progress)
 
 
 class AudiobookCreator(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super(AudiobookCreator, self).__init__()
-        self.ui = Ui_MainWindow()
         self.setupUi(self)
         self.setWindowTitle('Audiobook Creator')
 
-        # Подключаем сигналы к слотам
+        Config.load_config()  # Загружаем конфигурацию при запуске приложения
+
+        self.file_manager = FileManager()
+        self.metadata_manager = MetadataManager()
+        self.audio_processor = AudioProcessor(ffmpeg_path="external/ffmpeg.exe")  # Укажите путь к ffmpeg
+
+        self.init_ui()
+
+    def init_ui(self):
+        self.comboBox_audio_quality.addItems(["64k", "128k", "256k", "320k"])  # Добавляем варианты битрейта
+        self.comboBox_audio_quality.setCurrentText(Config.AUDIO_BITRATE)  # Устанавливаем текущее значение из Config
+
+        self.comboBox_audio_quality.currentTextChanged.connect(self.update_audio_bitrate)
+
         self.pushButton.clicked.connect(self.add_files)
         self.pushButton_2.clicked.connect(self.remove_selected_files)
         self.pushButton_upload_cover.clicked.connect(self.upload_cover)
-        self.pushButton_convert.clicked.connect(self.convert_files)
+        self.pushButton_convert.clicked.connect(self.start_conversion) #
         self.pushButton_stop_and_clean.clicked.connect(self.stop_and_clean)
 
-        self.file_paths = []  # Список для хранения путей к файлам
-        self.cover_image_path = None  # Путь к изображению обложки
+        self.listWidget.itemSelectionChanged.connect(self.display_metadata)
+
+    def update_audio_bitrate(self, bitrate):
+        Config.set_audio_bitrate(bitrate)
 
     def add_files(self):
-        # Реализация добавления файлов в listWidget
-        options = QFileDialog.Options()
-        file_paths, _ = QFileDialog.getOpenFileNames(self, "Выберите файлы", "", "MP3 Files (*.mp3);;All Files (*)", options=options)
-        if file_paths:
-            for path in file_paths:
-                if path not in self.file_paths:
-                    self.file_paths.append(path)
-                    self.listWidget.addItem(path)
-                else:
-                    QMessageBox.warning(self, "Предупреждение", f"Файл {path} уже добавлен.")
-
-        if file_paths:
-            self.extract_and_show_cover(file_paths[0])
-
-    def extract_and_show_cover(self, file_path):
-        try:
-            audio = ID3(file_path)
-            for tag in audio.values():
-                if isinstance(tag, APIC):
-                    image_data = tag.data
-                    image = QPixmap()
-                    image.loadFromData(image_data)
-                    if image.isNull():
-                        QMessageBox.warning(self, "Ошибка", "Не удалось загрузить изображение обложки.")
-                    else:
-                        self.label_cover_of_book.setPixmap(
-                            image.scaled(self.label_cover_of_book.size(), aspectRatioMode=QtCore.Qt.KeepAspectRatio))
-                    break
-            else:
-                # Нет обложки в метаданных
-                self.label_cover_of_book.clear()
-                QMessageBox.information(self, "Информация", "Обложка не найдена в выбранном файле.")
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
-
-
+        self.file_manager.add_files(self.listWidget)
 
     def remove_selected_files(self):
-        # Реализация удаления выбранных файлов из listWidget
+        if self.file_manager.remove_files(self.listWidget):
+            self.metadata_manager.clear_metadata(
+                self.lineEdit_title,
+                self.lineEdit_artist,
+                self.lineEdit_album,
+                self.lineEdit_year,
+                self.lineEdit_genre,
+                self.label_cover_of_book
+            )
+
+    def display_metadata(self):
         selected_items = self.listWidget.selectedItems()
         if not selected_items:
-            QMessageBox.warning(self, "Предупреждение", "Нет выбранных файлов для удаления.")
+            self.metadata_manager.clear_metadata(
+                self.lineEdit_title,
+                self.lineEdit_artist,
+                self.lineEdit_album,
+                self.lineEdit_year,
+                self.lineEdit_genre,
+                self.label_cover_of_book
+            )
             return
 
-        for item in selected_items:
-            self.file_paths.remove(item.text())
-            self.listWidget.takeItem(self.listWidget.row(item))
+        file_path = selected_items[0].text()
+        metadata, audio = self.metadata_manager.extract_metadata(file_path)
+        self.lineEdit_title.setText(metadata["title"])
+        self.lineEdit_artist.setText(metadata["artist"])
+        self.lineEdit_album.setText(metadata["album"])
+        self.lineEdit_year.setText(metadata["year"])
+        self.lineEdit_genre.setText(metadata["genre"])
 
+        self.metadata_manager.extract_and_show_cover(audio, self.label_cover_of_book)
+
+    def convert_files(self):
+        pass
+
+    def start_conversion(self):
+        output_path, _ = QFileDialog.getSaveFileName(self, "Сохранить аудиокнигу", "", "M4B Files (*.m4b)")
+        if not output_path:
+            return
+
+        bitrate = self.comboBox_audio_quality.currentText()
+        file_paths = self.file_manager.file_paths
+
+        self.thread = ConvertThread(self.audio_processor, file_paths, output_path, bitrate)
+        self.thread.progress_updated.connect(self.update_progress)
+        self.thread.conversion_finished.connect(self.conversion_finished)
+
+        self.thread.start()
+
+
+    # def convert_files_action(self):
+    #     output_dir = QFileDialog.getExistingDirectory(self, "Выберите папку для сохранения")
+    #     if output_dir:
+    #         metadata_list = []
+    #         for i in range(self.listWidget.count()):
+    #             item = self.listWidget.item(i)
+    #             file_path = item.text()
+    #             metadata, _ = self.metadata_manager.extract_metadata(file_path)
+    #             metadata_list.append(metadata)
+    #
+    #         convert_files(
+    #             file_paths=self.file_manager.file_paths,
+    #             output_dir=output_dir,
+    #             cover_image_path=self.file_manager.cover_image_path,
+    #             metadata_list=metadata_list,
+    #             progress_callback=self.update_progress
+    #         )
+
+    def update_progress(self, value):
+        self.progressBar.setValue(value)
+
+    def conversion_finished(self):
+        QMessageBox.information(self, "Готово", "Конвертация завершена!")
+        self.progressBar.setValue(0)
+
+    def stop_and_clean(self):
+        pass
 
 
     def upload_cover(self):
-        # Реализация загрузки обложки
-        options = QFileDialog.Options()
-        cover_image_path, _ = QFileDialog.getOpenFileName(self, "Выберите изображение обложки", "",
-                                                          "Images (*.png *.jpg *.bmp);;All Files (*)", options=options)
-
-
-        if cover_image_path:
-            # Показать изображение
-            self.cover_image_path = cover_image_path
-            pixmap = QPixmap(cover_image_path)
-            if pixmap.isNull():
-                QMessageBox.warning(self, "Ошибка", "Не удалось загрузить изображение.")
-            else:
-                self.label_cover_of_book.setPixmap(
-                    pixmap.scaled(self.label_cover_of_book.size(), aspectRatioMode=QtCore.Qt.KeepAspectRatio))
-        else:
-            QMessageBox.warning(self, "Предупреждение", "Изображение не выбрано.")
-
-    def convert_files(self):
-        # Реализация конвертации файлов
-        pass
-
-    def stop_and_clean(self):
-        # Реализация остановки процесса и очистки данных
-        pass
+        self.file_manager.upload_cover(self.label_cover_of_book)
 
 
 if __name__ == '__main__':
