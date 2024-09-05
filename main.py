@@ -73,12 +73,14 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         book_title = audio.get('title', [''])[0]
         author_name = audio.get('artist', [''])[0]
         album_name = audio.get('album', [''])[0]
+        year = audio.get('date', [''])[0]
         genre = audio.get('genre', [''])[0]
 
         # Установка значений в поля интерфейса
         self.lineEdit_title.setText(book_title)
         self.lineEdit_artist.setText(author_name)
         self.lineEdit_album.setText(album_name)
+        self.lineEdit_year.setText(year)
         self.lineEdit_genre.setText(genre)
 
 
