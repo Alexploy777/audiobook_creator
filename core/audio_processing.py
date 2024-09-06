@@ -45,7 +45,11 @@ class AudioProcessor:
             os.remove(cover_image_path)
 
     def _get_metadata(self, metadata):
-        return [f'-metadata {key}={value}' for key, value in metadata.items() if value]
+        result = []
+        for key, value in metadata.items():
+            if value:
+                result.extend(['-metadata', f"{key}={value}"])
+        return result
 
     def _run_command(self, command, error_message):
         process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
