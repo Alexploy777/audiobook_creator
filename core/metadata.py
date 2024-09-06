@@ -1,3 +1,4 @@
+# core/metadata.py
 from PyQt5 import QtCore
 from mutagen.id3 import ID3, APIC, ID3TimeStamp
 from PyQt5.QtGui import QPixmap

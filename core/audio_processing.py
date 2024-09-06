@@ -1,5 +1,4 @@
 import os
-from concurrent.futures import ThreadPoolExecutor
 from pydub import AudioSegment
 from mutagen.mp4 import MP4, MP4Cover
 
@@ -37,7 +36,6 @@ class AudioProcessor:
         audio['\xa9day'] = metadata.get("year")
         audio['\xa9gen'] = metadata.get("genre")
 
-        # Добавление обложки
         # Добавление обложки из байтов
         if cover_image_bytes:
             cover = MP4Cover(cover_image_bytes, imageformat=MP4Cover.FORMAT_JPEG)
@@ -45,7 +43,7 @@ class AudioProcessor:
 
         audio.save()
 
-    def convert_and_combine(self, mp3_files, output_path, bitrate, metadata, cover_image_path=None, progress_callback=None):
+    def convert_and_combine(self, mp3_files, output_path, bitrate, metadata, cover_image_bytes=None, progress_callback=None):
         total_steps = len(mp3_files) + 1  # +1 for combining step
         step_progress = 100 // total_steps
 
@@ -64,7 +62,7 @@ class AudioProcessor:
         self.combine_files(converted_files, output_path, progress_callback)
 
         # Добавление метаданных и обложки
-        self.add_cover_and_metadata(output_path, metadata, cover_image_path)
+        self.add_cover_and_metadata(output_path, metadata, cover_image_bytes)
 
         # Удаление временных файлов
         for temp_file in converted_files:
@@ -73,4 +71,3 @@ class AudioProcessor:
         # Устанавливаем прогресс на 100% по завершении
         if progress_callback:
             progress_callback(100)
-

@@ -1,3 +1,4 @@
+# data/file_manager.py
 from PyQt5 import QtCore
 from PyQt5.QtGui import QPixmap
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
