@@ -7,43 +7,52 @@ class AudioProcessor:
         self.ffmpeg_path = ffmpeg_path
 
     def convert_and_combine(self, file_paths, output_path, bitrate, metadata, cover_image, progress_callback):
-        # Команда для объединения файлов через пайп и добавления метаданных
-        command = [
-            self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0', '-i', 'pipe:0',
-            '-c', 'copy', *self._get_metadata(metadata), '-f', 'mp3', 'pipe:1'
-        ]
-
-        # Открываем пайпы для передачи данных
-        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
         try:
-            # Передаем данные аудиофайлов через пайп
-            for file_path in file_paths:
-                with open(file_path, 'rb') as audio_file:
-                    while True:
-                        chunk = audio_file.read(1024)  # читаем файл по 1024 байта
-                        if not chunk:
-                            break
-                        process.stdin.write(chunk)
+            # Команда для объединения файлов через пайп и добавления метаданных
+            command = [
+                self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0', '-i', 'pipe:0',
+                '-c', 'copy', *self._get_metadata(metadata), '-f', 'mp3', 'pipe:1'
+            ]
 
-            process.stdin.close()
+            # Открываем процесс для записи данных в stdin и чтения результата через stdout
+            process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
-            # Обработка вывода и отслеживание прогресса
-            self._monitor_progress(process.stderr, progress_callback)
+            try:
+                # Передача аудиофайлов через пайп в ffmpeg
+                for file_path in file_paths:
+                    with open(file_path, 'rb') as audio_file:
+                        while True:
+                            chunk = audio_file.read(1024)  # читаем по 1024 байта
+                            if not chunk:
+                                break
+                            process.stdin.write(chunk)  # запись в stdin процесса
 
-            # Получаем промежуточный результат (аудио)
-            intermediate_audio = process.stdout.read()
+                process.stdin.close()  # закрываем stdin для сигнала завершения ввода
 
-            # Дожидаемся завершения процесса
-            process.wait()
+                # Следим за прогрессом и выводом ошибок
+                self._monitor_progress(process.stderr, progress_callback)
 
-        except Exception as e:
-            process.kill()
-            raise RuntimeError(f"Ошибка при выполнении команды: {e}")
+                # Читаем результат процесса
+                intermediate_audio = process.stdout.read()
+
+                # Дожидаемся завершения процесса
+                return_code = process.wait()
+
+                if return_code != 0:
+                    stderr_output = process.stderr.read().decode('utf-8', 'ignore')
+                    raise RuntimeError(f"FFmpeg завершился с ошибкой: {stderr_output}")
+
+            except Exception as e:
+                process.kill()
+                raise RuntimeError(f"Ошибка при выполнении команды: {e}")
+
+        except BrokenPipeError:
+            raise RuntimeError("Ошибка: пайп был закрыт до завершения передачи данных.")
 
         # Добавление обложки (если есть)
         if cover_image:
             self._add_cover(intermediate_audio, cover_image, output_path, bitrate, metadata)
+
 
     def _add_cover(self, audio_data, cover_image, output_path, bitrate, metadata):
         # Используем пайпы для передачи обложки и аудиоданных
