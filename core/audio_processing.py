@@ -7,9 +7,6 @@ class AudioProcessor:
         self.ffmpeg_path = ffmpeg_path
 
     def convert_and_combine(self, file_paths, output_path, bitrate, metadata, cover_image, progress_callback):
-        # Формируем список файлов для ffmpeg напрямую без использования временных файлов
-        input_files = '|'.join(file_paths)
-
         # Команда для объединения файлов через пайп и добавления метаданных
         command = [
             self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0', '-i', 'pipe:0',
@@ -17,7 +14,8 @@ class AudioProcessor:
         ]
 
         # Открываем пайпы для передачи данных
-        with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+        with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
+                              stderr=subprocess.PIPE) as process:
             # Передаем данные аудиофайлов через пайп
             for file_path in file_paths:
                 with open(file_path, 'rb') as audio_file:
@@ -30,6 +28,10 @@ class AudioProcessor:
 
             # Получаем промежуточный результат (аудио)
             intermediate_audio = process.stdout.read()
+
+        # Добавление обложки (если есть)
+        if cover_image:
+            self._add_cover(intermediate_audio, cover_image, output_path, bitrate, metadata)
 
         # Добавление обложки (если есть)
         if cover_image:
