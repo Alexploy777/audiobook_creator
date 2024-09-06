@@ -41,6 +41,7 @@ class AudioProcessor:
 
         # Удаление временных файлов
         os.remove(temp_list)
+        os.remove(intermediate_audio)
         if cover_image:
             os.remove(cover_image_path)
 
