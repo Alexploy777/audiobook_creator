@@ -16,10 +16,10 @@ class AudioProcessor:
             # Подготавливаем команду для ffmpeg
             command = [
                 self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0', '-i', temp_list,
-                '-b:a', bitrate, '-vn', '-c:a', 'aac', output_path
+                '-b:a', bitrate, '-vn', '-c:a', 'aac'
             ]
 
-            # Добавляем метаданные к команде
+            # Добавляем метаданные к команде (они должны быть ДО вывода файла)
             if metadata["title"]:
                 command.extend(['-metadata', f"title={metadata['title']}"])
             if metadata["artist"]:
@@ -36,7 +36,10 @@ class AudioProcessor:
                 cover_image_path = "cover.jpg"
                 with open(cover_image_path, 'wb') as f:
                     f.write(cover_image)
-                command.extend(['-i', cover_image_path, '-c:v', 'mjpeg'])
+                command.extend(['-i', cover_image_path, '-c:v', 'mjpeg', '-map', '0', '-map', '1'])
+
+            # Выходной файл должен быть последним аргументом
+            command.append(output_path)
 
             # Выполняем команду через subprocess
             process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
