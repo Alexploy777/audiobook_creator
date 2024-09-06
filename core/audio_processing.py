@@ -14,12 +14,17 @@ class AudioProcessor:
         ]
 
         # Открываем пайпы для передачи данных
-        with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE) as process:
+        process = subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+        try:
             # Передаем данные аудиофайлов через пайп
             for file_path in file_paths:
                 with open(file_path, 'rb') as audio_file:
-                    process.stdin.write(audio_file.read())
+                    while True:
+                        chunk = audio_file.read(1024)  # читаем файл по 1024 байта
+                        if not chunk:
+                            break
+                        process.stdin.write(chunk)
 
             process.stdin.close()
 
@@ -29,9 +34,12 @@ class AudioProcessor:
             # Получаем промежуточный результат (аудио)
             intermediate_audio = process.stdout.read()
 
-        # Добавление обложки (если есть)
-        if cover_image:
-            self._add_cover(intermediate_audio, cover_image, output_path, bitrate, metadata)
+            # Дожидаемся завершения процесса
+            process.wait()
+
+        except Exception as e:
+            process.kill()
+            raise RuntimeError(f"Ошибка при выполнении команды: {e}")
 
         # Добавление обложки (если есть)
         if cover_image:
