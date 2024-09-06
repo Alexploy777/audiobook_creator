@@ -1,92 +1,49 @@
-# core/metadata.py
-from PyQt5 import QtCore
-from mutagen.id3 import ID3, APIC, ID3TimeStamp
-from PyQt5.QtGui import QPixmap
-from PyQt5.QtWidgets import QMessageBox
+from mutagen.mp3 import MP3
+from mutagen.id3 import ID3, TIT2, TPE1, TALB, TYER, TCON, APIC
+from PyQt5.QtWidgets import QLabel
 
 class MetadataManager:
-
-    @staticmethod
-    def extract_metadata(file_path):
-        metadata = {
-            "title": "",
-            "artist": "",
-            "album": "",
-            "year": "",
-            "genre": ""
-        }
+    def extract_metadata(self, file_path):
         try:
-            audio = ID3(file_path)
-
-            if 'TIT2' in audio:
-                metadata["title"] = str(audio['TIT2'].text[0])
-
-            if 'TPE1' in audio:
-                metadata["artist"] = str(audio['TPE1'].text[0])
-
-            if 'TALB' in audio:
-                metadata["album"] = str(audio['TALB'].text[0])
-
-            if 'TDRC' in audio:
-                metadata["year"] = str(audio['TDRC'].text[0])
-
-            if 'TCON' in audio:
-                metadata["genre"] = str(audio['TCON'].text[0])
-
+            audio = MP3(file_path, ID3=ID3)
+            metadata = {
+                "title": self.get_tag(audio, TIT2, "Неизвестно"),
+                "artist": self.get_tag(audio, TPE1, "Неизвестно"),
+                "album": self.get_tag(audio, TALB, "Неизвестно"),
+                "year": self.get_tag(audio, TYER, "Неизвестно"),
+                "genre": self.get_tag(audio, TCON, "Неизвестно")
+            }
             return metadata, audio
         except Exception as e:
-            return metadata, None
+            return {}, None
 
-    @staticmethod
-    def extract_and_show_cover(audio, label_cover_of_book):
-        if audio is None:
-            label_cover_of_book.clear()
-            return
-
+    def get_tag(self, audio, tag, default_value):
         try:
-            for tag in audio.values():
+            return audio[tag].text[0] if tag in audio else default_value
+        except Exception:
+            return default_value
+
+    def extract_and_show_cover(self, audio, label: QLabel):
+        try:
+            for tag in audio.tags.values():
                 if isinstance(tag, APIC):
                     image_data = tag.data
-                    pixmap = QPixmap()
-                    pixmap.loadFromData(image_data)
-                    if pixmap.isNull():
-                        QMessageBox.warning(None, "Ошибка", "Не удалось загрузить изображение обложки.")
-                    else:
-                        label_cover_of_book.setPixmap(
-                            pixmap.scaled(
-                                label_cover_of_book.size(),
-                                aspectRatioMode=QtCore.Qt.KeepAspectRatio
-                            )
-                        )
+                    label.setPixmap(image_data)  # Загружаем и отображаем обложку в QLabel
                     break
-            else:
-                label_cover_of_book.clear()
-                QMessageBox.information(None, "Информация", "Обложка не найдена в выбранном файле.")
-        except Exception as e:
-            QMessageBox.critical(None, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
+        except Exception:
+            label.clear()  # Если не удалось загрузить обложку, очищаем QLabel
 
-    @staticmethod
-    def extract_cover_image(label_cover_of_book):
-        pixmap = label_cover_of_book.pixmap()
-        if pixmap is not None:
-            # Преобразование pixmap в байты
-            buffer = QtCore.QByteArray()
-            buffer_stream = QtCore.QBuffer(buffer)
-            buffer_stream.open(QtCore.QIODevice.WriteOnly)
-            pixmap.save(buffer_stream, "JPEG")
-            return buffer.data()
+    def extract_cover_image(self, label: QLabel):
+        pixmap = label.pixmap()
+        if pixmap:
+            image_data = pixmap.toImage()
+            return image_data
         return None
 
-
-    @staticmethod
-    def clear_metadata(lineEdit_title, lineEdit_artist, lineEdit_album, lineEdit_year, lineEdit_genre, label_cover_of_book):
-        lineEdit_title.clear()
-        lineEdit_artist.clear()
-        lineEdit_album.clear()
-        lineEdit_year.clear()
-        lineEdit_genre.clear()
-        label_cover_of_book.clear()
-
-
-if __name__ == '__main__':
-    pass
+    def clear_metadata(self, title, artist, album, year, genre, label_cover):
+        title.clear()
+        artist.clear()
+        album.clear()
+        year.clear()
+        genre.clear()
+        label_cover.clear()
