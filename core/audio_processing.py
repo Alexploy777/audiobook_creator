@@ -1,49 +1,78 @@
 import subprocess
 import os
+from io import BytesIO
 
 class AudioProcessor:
     def __init__(self, ffmpeg_path):
         self.ffmpeg_path = ffmpeg_path
 
     def convert_and_combine(self, file_paths, output_path, bitrate, metadata, cover_image, progress_callback):
-        # Создаем временный список для всех аудиофайлов
-        temp_list = "file_list.txt"
-        with open(temp_list, 'w', encoding='utf-8') as f:
-            f.writelines(f"file '{file_path}'\n" for file_path in file_paths)
+        # Формируем список файлов для ffmpeg напрямую без использования временных файлов
+        input_files = '|'.join(file_paths)
 
-        # Команда ffmpeg для объединения аудио файлов и добавления метаданных
-        intermediate_audio = 'intermediate.mp3'
+        # Команда для объединения файлов через пайп и добавления метаданных
         command = [
-            self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0', '-i', temp_list,
-            '-c', 'copy', *self._get_metadata(metadata), intermediate_audio
+            self.ffmpeg_path, '-y', '-f', 'concat', '-safe', '0', '-i', 'pipe:0',
+            '-c', 'copy', *self._get_metadata(metadata), '-f', 'mp3', 'pipe:1'
         ]
 
-        # Выполнение команды объединения
-        self._run_command(command, "Ошибка при объединении аудио файлов")
+        # Открываем пайпы для передачи данных
+        with subprocess.Popen(command, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+            # Передаем данные аудиофайлов через пайп
+            for file_path in file_paths:
+                with open(file_path, 'rb') as audio_file:
+                    process.stdin.write(audio_file.read())
+
+            process.stdin.close()
+
+            # Обработка вывода и отслеживание прогресса
+            self._monitor_progress(process.stderr, progress_callback)
+
+            # Получаем промежуточный результат (аудио)
+            intermediate_audio = process.stdout.read()
 
         # Добавление обложки (если есть)
         if cover_image:
-            cover_image_path = "cover.jpg"
-            with open(cover_image_path, 'wb') as f:
-                f.write(cover_image)
+            self._add_cover(intermediate_audio, cover_image, output_path, bitrate, metadata)
 
-            # Команда ffmpeg для добавления обложки
-            command = [
-                self.ffmpeg_path, '-i', intermediate_audio, '-i', cover_image_path,
-                '-map', '0:0', '-map', '1:0', '-c:a', 'aac', '-b:a', bitrate,
-                '-c:v', 'mjpeg', '-metadata:s:v', 'title="Album cover"',
-                '-metadata:s:v', 'comment="Cover (Front)"', '-disposition:v', 'attached_pic',
-                '-f', 'mp4', output_path
-            ]
+    def _add_cover(self, audio_data, cover_image, output_path, bitrate, metadata):
+        # Используем пайпы для передачи обложки и аудиоданных
+        command = [
+            self.ffmpeg_path, '-i', 'pipe:0', '-i', 'pipe:1', '-map', '0:0', '-map', '1:0',
+            '-c:a', 'aac', '-b:a', bitrate, '-c:v', 'mjpeg', '-metadata:s:v', 'title="Album cover"',
+            '-metadata:s:v', 'comment="Cover (Front)"', '-disposition:v', 'attached_pic',
+            '-f', 'mp4', output_path
+        ]
 
-            # Выполнение команды добавления обложки
-            self._run_command(command, "Ошибка при добавлении обложки")
+        with subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE) as process:
+            # Передаем аудиоданные и данные обложки через пайп
+            process.stdin.write(audio_data)
+            process.stdin.write(cover_image)
+            process.stdin.close()
 
-        # Удаление временных файлов
-        os.remove(temp_list)
-        os.remove(intermediate_audio)
-        if cover_image:
-            os.remove(cover_image_path)
+            # Мониторим прогресс
+            self._monitor_progress(process.stderr, lambda p: print(f"Adding cover: {p}%"))
+
+    def _monitor_progress(self, stderr_pipe, progress_callback):
+        # Читаем вывод stderr для получения информации о прогрессе
+        while True:
+            line = stderr_pipe.readline()
+            if not line:
+                break
+
+            # Пример строки вывода ffmpeg, откуда можно извлечь прогресс:
+            # "size=  12345kB time=00:01:23.45 bitrate= 123.4kbits/s speed=1.23x"
+            if b'time=' in line:
+                # Извлекаем текущий прогресс
+                time_str = line.split(b'time=')[1].split()[0].decode('utf-8')
+                progress = self._parse_ffmpeg_time(time_str)
+                progress_callback(progress)
+
+    def _parse_ffmpeg_time(self, time_str):
+        # Преобразуем строку времени "00:01:23.45" в прогресс (в процентах)
+        h, m, s = map(float, time_str.split(':'))
+        total_seconds = h * 3600 + m * 60 + s
+        return int((total_seconds / self.total_duration) * 100)
 
     def _get_metadata(self, metadata):
         result = []
@@ -51,10 +80,3 @@ class AudioProcessor:
             if value:
                 result.extend(['-metadata', f"{key}={value}"])
         return result
-
-    def _run_command(self, command, error_message):
-        process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        stdout, stderr = process.communicate()
-        if process.returncode != 0:
-            raise RuntimeError(f"{error_message}: {stderr.decode('utf-8', 'ignore')}")
-        print(stdout.decode('utf-8', 'ignore'))
