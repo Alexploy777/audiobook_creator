@@ -65,6 +65,7 @@ class MetadataManager:
         except Exception as e:
             QMessageBox.critical(None, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
 
+    # Получаем обложку из виджета label_cover_of_book в виде байтовой строки!
     @staticmethod
     def extract_cover_image(label_cover_of_book):
         pixmap = label_cover_of_book.pixmap()

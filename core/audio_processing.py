@@ -2,10 +2,11 @@ import subprocess
 import os
 
 class AudioProcessor:
-    def __init__(self, ffmpeg_path="ffmpeg"):
+    def __init__(self, ffmpeg_path):
         self.ffmpeg_path = ffmpeg_path
 
     def convert_and_combine(self, file_paths, output_path, bitrate, metadata, cover_image, progress_callback):
+        global cover_image_path
         try:
             # Создаем временный список для всех аудиофайлов
             temp_list = "file_list.txt"
@@ -19,6 +20,7 @@ class AudioProcessor:
                 '-b:a', bitrate, '-vn', '-c:a', 'aac'
             ]
 
+
             # Добавляем метаданные к команде (они должны быть ДО вывода файла)
             if metadata["title"]:
                 command.extend(['-metadata', f"title={metadata['title']}"])
@@ -31,12 +33,13 @@ class AudioProcessor:
             if metadata["genre"]:
                 command.extend(['-metadata', f"genre={metadata['genre']}"])
 
-            # Добавляем обложку (если есть)
+            #Добавляем обложку (если есть)
             if cover_image:
                 cover_image_path = "cover.jpg"
                 with open(cover_image_path, 'wb') as f:
                     f.write(cover_image)
                 command.extend(['-i', cover_image_path, '-c:v', 'mjpeg', '-map', '0', '-map', '1'])
+
 
             # Выходной файл должен быть последним аргументом
             command.append(output_path)

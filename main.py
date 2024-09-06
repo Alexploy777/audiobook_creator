@@ -123,7 +123,7 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
             "genre": self.lineEdit_genre.text()
         }
 
-        # Получаем путь к обложке (если оно загружено из файла или извлечено из mp3)
+        # Получаем обложку из виджета в виде байтовой строки!
         cover_image = self.metadata_manager.extract_cover_image(self.label_cover_of_book)
 
         self.thread = ConvertThread(self.audio_processor, file_paths, output_path, bitrate, metadata, cover_image)
@@ -133,18 +133,18 @@ class AudiobookCreator(QMainWindow, Ui_MainWindow):
         self.thread.start()
 
 
-    def extract_cover_image(self, audio):
-        if audio is None:
-            return None
-        try:
-            for tag in audio.values():
-                if isinstance(tag, APIC):
-                    image_data = tag.data
-                    return image_data  # Возвращаем байтовые данные изображения
-            return None
-        except Exception as e:
-            QMessageBox.critical(self, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
-            return None
+    # def extract_cover_image(self, audio):
+    #     if audio is None:
+    #         return None
+    #     try:
+    #         for tag in audio.values():
+    #             if isinstance(tag, APIC):
+    #                 image_data = tag.data
+    #                 return image_data  # Возвращаем байтовые данные изображения
+    #         return None
+    #     except Exception as e:
+    #         QMessageBox.critical(self, "Ошибка", f"Ошибка при извлечении обложки: {str(e)}")
+    #         return None
 
 
     def update_progress(self, progress):
